@@ -7,6 +7,84 @@
 
 ### 1. Option/Maybe型による安全なnull処理
 
+**なぜOption/Maybe型が必要なのか？**
+
+JavaScriptやTypeScriptでは、`null`や`undefined`の存在により、予期しないエラーが発生しやすくなります。Option型は、値の存在・非存在を型レベルで明示的に表現することで、これらの問題を解決します。
+
+**従来の問題を見てみましょう：**
+
+```typescript
+// ❌ 従来のnull/undefined処理の問題
+interface User {
+  id: number;
+  name: string;
+  email?: string; // undefinedの可能性がある
+}
+
+const users: User[] = [
+  { id: 1, name: 'Alice', email: 'alice@example.com' },
+  { id: 2, name: 'Bob' }, // emailなし
+];
+
+// 危険なコード：runtime エラーが発生する可能性
+const getUserEmail = (userId: number): string => {
+  const user = users.find(u => u.id === userId); // undefinedの可能性
+  return user.email.toLowerCase(); // TypeError: Cannot read property 'toLowerCase' of undefined
+};
+
+// 防御的プログラミング：コードが冗長になる
+const getUserEmailSafe = (userId: number): string | null => {
+  const user = users.find(u => u.id === userId);
+  if (!user) return null;
+  if (!user.email) return null;
+  return user.email.toLowerCase();
+};
+
+// 問題点：
+// 1. 毎回null/undefinedチェックが必要
+// 2. エラーハンドリングが散在
+// 3. コードが読みにくくなる
+// 4. チェック忘れによるバグが発生しやすい
+```
+
+```typescript
+// ✅ Option型を使った解決策
+type Option<T> = Some<T> | None;
+
+interface Some<T> {
+  readonly _tag: 'Some';
+  readonly value: T;
+}
+
+interface None {
+  readonly _tag: 'None';
+}
+
+const some = <T>(value: T): Option<T> => ({ _tag: 'Some', value });
+const none: Option<never> = { _tag: 'None' };
+
+// 安全なfind関数
+const findUser = (userId: number): Option<User> => {
+  const user = users.find(u => u.id === userId);
+  return user ? some(user) : none;
+};
+
+// 安全なemail取得関数
+const getUserEmailSafe = (userId: number): Option<string> => {
+  const userOption = findUser(userId);
+  if (userOption._tag === 'None') return none;
+  
+  const user = userOption.value;
+  return user.email ? some(user.email.toLowerCase()) : none;
+};
+
+// 利点：
+// 1. 値の存在・非存在が型レベルで明確
+// 2. コンパイル時にnullチェック忘れを検出
+// 3. エラーハンドリングが統一される
+// 4. コードの意図が明確
+```
+
 **Option/Maybe型とは？**
 `null` や `undefined` を安全に扱うための型です。値が存在する場合（Some）と存在しない場合（None）を明示的に表現します。
 
@@ -101,6 +179,121 @@ console.log(getUserName(userJson)); // '太郎'
 ```
 
 ### 2. Either型による明示的なエラーハンドリング
+
+**なぜEither型が必要なのか？**
+
+従来のエラーハンドリング（例外やundefinedの返却）では、エラーの種類や原因が不明確になりがちです。Either型は、成功と失敗の両方のケースを型レベルで明示的に表現し、エラー情報を安全に扱うことができます。
+
+**従来のエラーハンドリングの問題:**
+
+```typescript
+// ❌ 従来のエラーハンドリング（例外）
+const parseUserAge = (ageString: string): number => {
+  const age = parseInt(ageString, 10);
+  if (isNaN(age)) {
+    throw new Error('Invalid age'); // どんなエラーかわからない
+  }
+  if (age < 0) {
+    throw new Error('Age cannot be negative'); // エラーの種類が統一されていない
+  }
+  if (age > 150) {
+    throw new Error('Age too high'); // 例外処理でコードが複雑になる
+  }
+  return age;
+};
+
+// 使用側：どんなエラーが発生するかわからない
+try {
+  const age = parseUserAge('abc');
+  console.log(`Age: ${age}`);
+} catch (error) {
+  console.error(error.message); // エラーの型が不明確
+}
+
+// ❌ 従来のエラーハンドリング（null返却）
+const parseUserAgeSafe = (ageString: string): number | null => {
+  const age = parseInt(ageString, 10);
+  if (isNaN(age) || age < 0 || age > 150) {
+    return null; // なぜエラーになったかわからない
+  }
+  return age;
+};
+
+// 問題点：
+// 1. エラーの原因が不明確
+// 2. エラーハンドリングが統一されていない
+// 3. コンパイル時にエラーケースを強制されない
+// 4. エラー情報が失われる
+```
+
+```typescript
+// ✅ Either型を使った解決策
+type ValidationError = {
+  field: string;
+  code: 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'NEGATIVE_VALUE';
+  message: string;
+};
+
+type Either<L, R> = Left<L> | Right<R>;
+
+interface Left<L> {
+  readonly _tag: 'Left';
+  readonly left: L;
+}
+
+interface Right<R> {
+  readonly _tag: 'Right';
+  readonly right: R;
+}
+
+const left = <L, R = never>(value: L): Either<L, R> => ({ _tag: 'Left', left: value });
+const right = <L = never, R = never>(value: R): Either<L, R> => ({ _tag: 'Right', right: value });
+
+// 明示的なエラーハンドリング
+const parseUserAge = (ageString: string): Either<ValidationError, number> => {
+  const age = parseInt(ageString, 10);
+  
+  if (isNaN(age)) {
+    return left({
+      field: 'age',
+      code: 'INVALID_FORMAT',
+      message: '年齢は数値で入力してください'
+    });
+  }
+  
+  if (age < 0) {
+    return left({
+      field: 'age',
+      code: 'NEGATIVE_VALUE',
+      message: '年齢は0以上で入力してください'
+    });
+  }
+  
+  if (age > 150) {
+    return left({
+      field: 'age',
+      code: 'OUT_OF_RANGE',
+      message: '年齢は150以下で入力してください'
+    });
+  }
+  
+  return right(age);
+};
+
+// 使用側：エラーケースの処理が強制される
+const result = parseUserAge('abc');
+if (result._tag === 'Left') {
+  console.error(`Error in ${result.left.field}: ${result.left.message}`);
+} else {
+  console.log(`Valid age: ${result.right}`);
+}
+
+// 利点：
+// 1. エラーの詳細情報が型安全に取得できる
+// 2. すべてのエラーケースが明示的
+// 3. コンパイル時にエラーハンドリング忘れを検出
+// 4. エラーの種類によって異なる処理が可能
+```
 
 **Either型とは？**
 成功（Right）と失敗（Left）を明示的に表現する型です。エラー情報を型安全に扱えます。

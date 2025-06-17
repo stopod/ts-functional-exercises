@@ -7,26 +7,120 @@
 
 ### 1. 関数合成（Function Composition）
 
-**関数合成とは？**
+**関数合成とは？なぜ重要なのか？**
+
 複数の関数を組み合わせて、新しい関数を作る手法です。数学的には、`f(g(x))` のように関数を連鎖させることを指します。
 
-#### compose関数の理解
+**現実の問題：ユーザー登録処理を例に**
 
+```typescript
+// ❌ 関数合成を使わない場合（手続き型）
+const registerUser = (input: string) => {
+  // 1. バリデーション
+  if (!input || input.length < 3) {
+    throw new Error('Invalid input');
+  }
+  
+  // 2. 正規化
+  const trimmed = input.trim();
+  const normalized = trimmed.toLowerCase();
+  
+  // 3. フォーマット
+  const formatted = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  
+  // 4. プレフィックス追加
+  const prefixed = 'user_' + formatted;
+  
+  // 5. データベース保存（疑似コード）
+  return saveToDatabase(prefixed);
+};
+
+// 問題点：
+// 1. 長い関数で可読性が低い
+// 2. 各ステップをテストしにくい
+// 3. 一部のステップを他の場所で再利用できない
+// 4. エラーハンドリングが複雑
+```
+
+```typescript
+// ✅ 関数合成を使った場合（関数型）
+// 各ステップを小さな関数に分割
+const validate = (input: string): string => {
+  if (!input || input.length < 3) throw new Error('Invalid input');
+  return input;
+};
+
+const trim = (str: string): string => str.trim();
+const toLowerCase = (str: string): string => str.toLowerCase();
+const capitalize = (str: string): string => 
+  str.charAt(0).toUpperCase() + str.slice(1);
+const addUserPrefix = (str: string): string => 'user_' + str;
+
+// 関数を合成して新しい関数を作成
+const processUserInput = compose(
+  addUserPrefix,
+  compose(
+    capitalize,
+    compose(toLowerCase, compose(trim, validate))
+  )
+);
+
+const registerUser = (input: string) => {
+  const processedInput = processUserInput(input);
+  return saveToDatabase(processedInput);
+};
+
+// 利点：
+// 1. 各関数が単一の責任を持つ（単一責任の原則）
+// 2. 各関数を個別にテスト可能
+// 3. 関数を他の場所で再利用可能（trim, capitalize など）
+// 4. 処理の流れが明確
+// 5. 新しい処理ステップを簡単に追加できる
+```
+
+#### 段階的な学習：compose関数の理解
+
+**ステップ1: 最初は手動で組み合わせ**
+```typescript
+const add1 = (x: number): number => x + 1;
+const multiply2 = (x: number): number => x * 2;
+
+// 最初は手動で関数を組み合わせ
+const manualComposition = (x: number) => multiply2(add1(x));
+console.log(manualComposition(3)); // (3 + 1) * 2 = 8
+```
+
+**ステップ2: compose関数を理解**
 ```typescript
 // 基本的なcompose関数
 const compose = <A, B, C>(f: (b: B) => C, g: (a: A) => B) => 
   (a: A): C => f(g(a));
 
-// 使用例
-const add1 = (x: number): number => x + 1;
-const multiply2 = (x: number): number => x * 2;
+// 上の手動の処理をcomposeで表現
+const composedFunction = compose(multiply2, add1);
+console.log(composedFunction(3)); // (3 + 1) * 2 = 8
 
-// compose を使って関数を合成
-const add1ThenMultiply2 = compose(multiply2, add1);
-console.log(add1ThenMultiply2(3)); // (3 + 1) * 2 = 8
+// 重要：composeは右から左に実行される
+// compose(multiply2, add1) は multiply2(add1(x)) と同じ
+```
 
-// composeは右から左に実行されることに注意
-// compose(f, g)(x) は f(g(x)) と同じ
+**ステップ3: より複雑な合成**
+```typescript
+const add5 = (x: number): number => x + 5;
+const square = (x: number): number => x * x;
+const subtract10 = (x: number): number => x - 10;
+
+// 複数段階の合成を段階的に構築
+// Step 3a: 2つの関数の合成
+const step1 = compose(square, add5);  // まず5を足して、次に2乗
+console.log(step1(3)); // (3 + 5)² = 64
+
+// Step 3b: 3つの関数の合成
+const step2 = compose(subtract10, compose(square, add5));
+console.log(step2(3)); // ((3 + 5)²) - 10 = 54
+
+// 理解チェック：処理の順序を確認
+// 入力: 3 → add5(3) = 8 → square(8) = 64 → subtract10(64) = 54
 ```
 
 #### より複雑な合成例
@@ -48,8 +142,48 @@ console.log(processString('  hello world  ')); // 'HELLO WORLD!'
 
 ### 2. パイプ（Pipe）
 
-**パイプとは？**
-composeとは逆で、左から右に関数を実行する手法です。より直感的で読みやすいことが多いです。
+**パイプとは？なぜcomposeより読みやすいのか？**
+
+composeとは逆で、左から右に関数を実行する手法です。人間の思考の流れに沿って処理が記述できるため、より直感的で読みやすいことが多いです。
+
+**compose vs pipe の読みやすさ比較**
+
+```typescript
+// 同じ処理をcomposeとpipeで実装してみましょう
+const trim = (str: string): string => str.trim();
+const toLowerCase = (str: string): string => str.toLowerCase();
+const capitalize = (str: string): string => 
+  str.charAt(0).toUpperCase() + str.slice(1);
+const addUserPrefix = (str: string): string => 'user_' + str;
+
+// ❌ composeを使った場合（右から左に読む必要がある）
+const processWithCompose = compose(
+  addUserPrefix,     // 4番目の処理
+  compose(
+    capitalize,      // 3番目の処理
+    compose(
+      toLowerCase,   // 2番目の処理
+      trim          // 1番目の処理
+    )
+  )
+);
+
+// 理解するためには逆順で読む必要がある：
+// 1. trim → 2. toLowerCase → 3. capitalize → 4. addUserPrefix
+
+// ✅ pipeを使った場合（左から右に自然に読める）
+const processWithPipe = pipe(
+  trim,              // 1番目の処理
+  toLowerCase,       // 2番目の処理  
+  capitalize,        // 3番目の処理
+  addUserPrefix      // 4番目の処理
+);
+
+// 自然な順序で読める：
+// 1. 空白除去 → 2. 小文字化 → 3. 先頭大文字化 → 4. プレフィックス追加
+
+console.log(processWithPipe('  JOHN DOE  ')); // 'user_John doe'
+```
 
 ```typescript
 // 基本的なpipe関数

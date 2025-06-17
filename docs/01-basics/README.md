@@ -28,28 +28,103 @@ const impureIncrement = (): number => {
 const randomNumber = (): number => Math.random(); // 毎回異なる値を返す
 ```
 
-**純粋関数の利点：**
-- テストしやすい
-- デバッグしやすい
-- 並行処理で安全
-- キャッシュ可能
+**純粋関数の利点：なぜ重要なのか？**
+
+実際のコード例で比較してみましょう：
+
+```typescript
+// ❌ 問題のあるコード（副作用あり）
+let globalCounter = 0;
+let globalConfig = { apiUrl: 'http://localhost:3000' };
+
+const fetchUserData = (userId: number) => {
+  globalCounter++; // 副作用：グローバル状態を変更
+  console.log(`API call count: ${globalCounter}`); // 副作用：ログ出力
+  return fetch(`${globalConfig.apiUrl}/users/${userId}`);
+};
+
+// 問題点：
+// 1. テストが困難（globalCounterの状態に依存）
+// 2. 同じuserIdでも呼び出すたびに異なる副作用が発生
+// 3. 並行実行時にglobalCounterの値が予測不可能
+// 4. globalConfigが変更されると動作が変わる
+```
+
+```typescript
+// ✅ 純粋関数版
+const createFetchUserData = (apiUrl: string, logger: (msg: string) => void) => 
+  (userId: number, callCount: number) => {
+    logger(`API call count: ${callCount}`);
+    return fetch(`${apiUrl}/users/${userId}`);
+  };
+
+// 利点：
+// 1. テストしやすい：すべての依存関係が明示的
+// 2. 予測可能：同じ引数なら常に同じ結果
+// 3. 並行処理で安全：外部状態を変更しない
+// 4. 再利用可能：異なるAPIURLやロガーで使用可能
+```
+
+**具体的なメリット：**
+- **テストしやすい**: モックやスタブを簡単に作成できる
+- **デバッグしやすい**: バグの原因を特定しやすい  
+- **並行処理で安全**: レースコンディションが発生しない
+- **キャッシュ可能**: 同じ入力に対して結果をキャッシュできる
 
 ### 2. 不変性（Immutability）
 
-**不変性とは？**
+**不変性とは？なぜ大切なのか？**
+
 一度作られたデータを変更せず、新しいデータを作成するアプローチです。
 
-```typescript
-// ❌ 可変的なアプローチ
-const numbers = [1, 2, 3];
-numbers.push(4); // 元の配列を変更
-console.log(numbers); // [1, 2, 3, 4]
+**現実の問題を見てみましょう：**
 
-// ✅ 不変的なアプローチ
-const originalNumbers = [1, 2, 3];
-const newNumbers = [...originalNumbers, 4]; // 新しい配列を作成
-console.log(originalNumbers); // [1, 2, 3] - 元の配列は変更されない
-console.log(newNumbers); // [1, 2, 3, 4]
+```typescript
+// ❌ 可変的なアプローチの問題
+const shoppingCart = [
+  { id: 1, name: 'ノートPC', price: 80000, quantity: 1 }
+];
+
+// 関数Aがカートを変更
+const addDiscount = (cart: any[]) => {
+  cart[0].price = cart[0].price * 0.9; // 元のオブジェクトを直接変更！
+  return cart;
+};
+
+// 関数Bがカートを使用
+const calculateTotal = (cart: any[]) => {
+  return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+};
+
+console.log('変更前の価格:', shoppingCart[0].price); // 80000
+const discountedCart = addDiscount(shoppingCart);
+console.log('変更後の価格:', shoppingCart[0].price); // 72000 - 元のデータが変わってしまった！
+
+// 問題：元のカートデータが予期せず変更されてしまい、
+// 後で「割引前の価格」が必要になったときに参照できない
+```
+
+```typescript
+// ✅ 不変的なアプローチの解決策
+const originalCart = [
+  { id: 1, name: 'ノートPC', price: 80000, quantity: 1 }
+];
+
+// 新しいオブジェクトを作成して返す
+const addDiscount = (cart: any[]) => {
+  return cart.map(item => ({
+    ...item,  // 元のプロパティをコピー
+    price: item.price * 0.9  // 価格のみ変更
+  }));
+};
+
+console.log('元のカート:', originalCart[0].price); // 80000
+const discountedCart = addDiscount(originalCart);
+console.log('割引後カート:', discountedCart[0].price); // 72000
+console.log('元のカート（変更されていない）:', originalCart[0].price); // 80000
+
+// 利点：元のデータが保持されているため、
+// 必要に応じて「割引前の価格」を参照できる
 ```
 
 **オブジェクトの場合：**
@@ -64,6 +139,61 @@ const updatedPerson = { ...originalPerson, age: 26 }; // 新しいオブジェ�
 ```
 
 ### 3. 高階関数の復習と応用
+
+**なぜ高階関数が重要なのか？**
+
+従来のループと比較して、高階関数のメリットを実感してみましょう：
+
+```typescript
+// ❌ 従来のループ（命令的プログラミング）
+const processUsers = (users: any[]) => {
+  const results = [];
+  for (let i = 0; i < users.length; i++) {
+    const user = users[i];
+    if (user.age >= 20) {  // 大人のユーザーのみ
+      if (user.isActive) { // アクティブなユーザーのみ
+        const processed = {
+          id: user.id,
+          displayName: user.name.toUpperCase(),
+          category: user.age >= 65 ? 'senior' : 'adult'
+        };
+        results.push(processed);
+      }
+    }
+  }
+  return results;
+};
+
+// 問題点：
+// 1. コードが長くて読みにくい
+// 2. ロジックが混在している（フィルタリング + 変換）
+// 3. バグが入りやすい（インデックス操作、条件分岐）
+// 4. 再利用が困難
+```
+
+```typescript
+// ✅ 高階関数を使った宣言的プログラミング
+const isAdult = (user: any) => user.age >= 20;
+const isActive = (user: any) => user.isActive;
+const transformUser = (user: any) => ({
+  id: user.id,
+  displayName: user.name.toUpperCase(),
+  category: user.age >= 65 ? 'senior' : 'adult'
+});
+
+const processUsers = (users: any[]) => 
+  users
+    .filter(isAdult)      // 大人のユーザーのみ
+    .filter(isActive)     // アクティブなユーザーのみ  
+    .map(transformUser);  // データ変換
+
+// 利点：
+// 1. 読みやすい：「何をしているか」が明確
+// 2. 関心の分離：各関数が単一の責任を持つ
+// 3. テストしやすい：各関数を個別にテスト可能
+// 4. 再利用可能：isAdult、isActiveなどを他の場所でも使用可能
+// 5. 組み合わせ可能：異なる順序で組み合わせ可能
+```
 
 すでにご存知のmap、filter、reduceを復習し、より高度な使い方を学びます。
 
