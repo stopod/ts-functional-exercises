@@ -1,0 +1,27 @@
+{
+  "name": "ts-functional",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "watch": "nodemon --exec ts-node src/index.ts",
+    "clean": "rm -rf dist",
+    "test": "echo \"テスト機能は各レベルのソリューションファイルで直接実行してください。例: ts-node docs/01-basics/solutions.ts\"",
+    "test:level1": "echo \"Level 1のテストを実行するには: ts-node docs/01-basics/solutions.ts\"",
+    "test:level2": "echo \"Level 2のテストを実行するには: ts-node docs/02-composition/solutions.ts\"", 
+    "test:level3": "echo \"Level 3のテストを実行するには: ts-node docs/03-types/solutions.ts\"",
+    "test:level4": "echo \"Level 4のテストを実行するには: ts-node docs/04-practical/solutions.ts\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
