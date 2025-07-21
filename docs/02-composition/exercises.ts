@@ -14,29 +14,26 @@
 // 提供される関数群
 const trim = (str: string): string => str.trim();
 const toUpperCase = (str: string): string => str.toUpperCase();
-const addExclamation = (str: string): string => str + '!';
+const addExclamation = (str: string): string => str + "!";
 
 // compose関数（すでに実装済み）
-const compose = <A, B, C>(f: (b: B) => C, g: (a: A) => B) => 
-  (a: A): C => f(g(a));
+const compose =
+  <A, B, C>(f: (b: B) => C, g: (a: A) => B) =>
+  (a: A): C =>
+    f(g(a));
 
 // TODO: composeを使って文字列処理関数を作成してください
 // const processString = compose(/* ここに実装 */);
-
-// テスト用
-// console.log(processString('  hello world  ')); // 'HELLO WORLD!' になるはず
 
 /**
  * 問題1-2: 3つの関数を合成するcompose3関数を実装してください
  */
 // TODO: compose3関数を実装してください
-// const compose3 = <A, B, C, D>(
-//   f: (c: C) => D,
-//   g: (b: B) => C,
-//   h: (a: A) => B
-// ) => (a: A): D => {
-//   // ここに実装
-// };
+const compose3 =
+  <A, B, C, D>(f: (c: C) => D, g: (b: B) => C, h: (a: A) => B) =>
+  (a: A): D => {
+    // ここに実装
+  };
 
 // 使用例：数値を「+1 → ×2 → ×3」の順で処理
 const add1 = (x: number): number => x + 1;
@@ -44,8 +41,7 @@ const multiply2 = (x: number): number => x * 2;
 const multiply3 = (x: number): number => x * 3;
 
 // TODO: compose3を使って関数を作成
-// const processNumber = compose3(multiply3, multiply2, add1);
-// console.log(processNumber(5)); // ((5 + 1) * 2) * 3 = 36 になるはず
+// ここに実装
 
 // ===========================================
 // 問題2: pipe関数の実装と活用
@@ -56,22 +52,37 @@ const multiply3 = (x: number): number => x * 3;
  * composeとは逆順（左から右）で関数を実行します
  */
 // TODO: pipe関数を実装してください
-// const pipe = <T>(...fns: Array<(arg: T) => T>) => 
-//   (value: T): T => {
-//     // ここに実装（reduce を使うと良いでしょう）
-//   };
+const pipe =
+  <T>(...fns: Array<(arg: T) => T>) =>
+  (value: T): T => {
+    // ここに実装（reduce を使うと良いでしょう）
+  };
 
 /**
  * 問題2-2: より柔軟なpipeFlexible関数を実装してください
  * 型を変換できるバージョンです
  */
+
+type PipeChain<T> = {
+  pipe: <U>(fn: (value: T) => U) => PipeChain<U>;
+  value: () => T;
+  // 追加メソッド: mapのエイリアス
+  map: <U>(fn: (value: T) => U) => PipeChain<U>;
+  // 追加メソッド: tap（デバッグ用）
+  tap: (fn: (value: T) => void) => PipeChain<T>;
+};
+
 // TODO: pipeFlexible関数を実装してください
-// const pipeFlexible = <T>(value: T) => ({
-//   pipe: <U>(fn: (value: T) => U) => {
-//     // ここに実装
-//   },
-//   value: () => value
-// });
+const pipeFlexible = <T>(value: T): PipeChain<T> => ({
+  // ここに実装
+  pipe: <U>(fn: (value: T) => U) => pipeFlexible(fn(value)),
+  map: <U>(fn: (value: T) => U) => pipeFlexible(fn(value)),
+  tap: (fn: (value: T) => void) => {
+    fn(value);
+    return pipeFlexible(value);
+  },
+  value: () => value,
+});
 
 // 使用例：
 // const result = pipeFlexible(10)
@@ -108,39 +119,43 @@ type ProcessedUser = {
 // TODO: 以下の変換関数を実装してください
 
 // 1. メールアドレスを正規化（小文字化、トリム）
-// const normalizeEmail = (userData: RawUserData): RawUserData => {
-//   // ここに実装
-// };
+const normalizeEmail = (userData: RawUserData): RawUserData => {
+  // ここに実装
+};
 
 // 2. 姓名を結合してfullNameを作成
-// const createFullName = (userData: RawUserData): RawUserData & { fullName: string } => {
-//   // ここに実装
-// };
+const createFullName = (
+  userData: RawUserData
+): RawUserData & { fullName: string } => {
+  // ここに実装
+};
 
 // 3. 生年から年齢を計算
-// const calculateAge = (userData: RawUserData & { fullName: string }): RawUserData & { fullName: string; age: number } => {
-//   const currentYear = new Date().getFullYear();
-//   // ここに実装
-// };
+const calculateAge = (
+  userData: RawUserData & { fullName: string }
+): RawUserData & { fullName: string; age: number } => {
+  // ここに実装
+};
 
 // 4. 成人フラグを追加
-// const addAdultFlag = (userData: RawUserData & { fullName: string; age: number }): ProcessedUser => {
-//   // ここに実装
-// };
+const addAdultFlag = (
+  userData: RawUserData & { fullName: string; age: number }
+): ProcessedUser => {
+  // ここに実装
+};
 
 // TODO: パイプラインを使って全体の変換関数を作成
-// const transformUser = (rawData: RawUserData): ProcessedUser => 
-//   pipe(
-//     // ここに変換関数を順番に並べてください
-//   )(rawData);
+const transformUser = (rawData: RawUserData): ProcessedUser =>
+  // ここに変換関数を順番に並べてください
+  pipe(rawData);
 
 // テストデータ
 const testUserData: RawUserData = {
-  first_name: '太郎',
-  last_name: '山田',
-  email: '  TARO.YAMADA@EXAMPLE.COM  ',
-  birth_year: '1990',
-  country: '日本'
+  first_name: "太郎",
+  last_name: "山田",
+  email: "  TARO.YAMADA@EXAMPLE.COM  ",
+  birth_year: "1990",
+  country: "日本",
 };
 
 // console.log(transformUser(testUserData));
@@ -154,56 +169,59 @@ const testUserData: RawUserData = {
  */
 
 // TODO: 2引数の関数をカリー化する関数を実装
-// const curry2 = <A, B, C>(fn: (a: A, b: B) => C) => 
-//   (a: A) => (b: B): C => {
-//     // ここに実装
-//   };
+const curry2 =
+  <A, B, C>(fn: (a: A, b: B) => C) =>
+  (a: A) =>
+  (b: B): C => {
+    // ここに実装
+  };
 
 // 使用例
 const addTwoNumbers = (a: number, b: number): number => a + b;
-// const curriedAdd = curry2(addTwoNumbers);
-// const add10 = curriedAdd(10);
-// console.log(add10(5)); // 15 になるはず
+const curriedAdd = curry2(addTwoNumbers);
+const add10 = curriedAdd(10);
+console.log(add10(5)); // 15 になるはず
 
 /**
  * 問題4-2: 3引数の関数をカリー化する関数を実装してください
  */
 // TODO: curry3関数を実装
-// const curry3 = <A, B, C, D>(fn: (a: A, b: B, c: C) => D) => 
-//   (a: A) => (b: B) => (c: C): D => {
-//     // ここに実装
-//   };
+const curry3 =
+  <A, B, C, D>(fn: (a: A, b: B, c: C) => D) =>
+  (a: A) =>
+  (b: B) =>
+  (c: C): D => {
+    // ここに実装
+  };
 
 /**
  * 問題4-3: 配列操作用のカリー化された関数を作成してください
  */
 
 // TODO: カリー化されたmap関数を実装
-// const curriedMap = <T, U>(fn: (item: T) => U) => 
-//   (array: T[]): U[] => {
-//     // ここに実装
-//   };
+const curriedMap =
+  <T, U>(fn: (item: T) => U) =>
+  (array: T[]): U[] => {
+    // ここに実装
+  };
 
 // TODO: カリー化されたfilter関数を実装
-// const curriedFilter = <T>(predicate: (item: T) => boolean) => 
-//   (array: T[]): T[] => {
-//     // ここに実装
-//   };
+const curriedFilter =
+  <T>(predicate: (item: T) => boolean) =>
+  (array: T[]): T[] => {
+    // ここに実装
+  };
 
 // 使用例：
 const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-// const double = curriedMap((n: number) => n * 2);
-// const onlyEven = curriedFilter((n: number) => n % 2 === 0);
-// const greaterThan5 = curriedFilter((n: number) => n > 5);
+const double = curriedMap((n: number) => n * 2);
+const onlyEven = curriedFilter((n: number) => n % 2 === 0);
+const greaterThan5 = curriedFilter((n: number) => n > 5);
 
 // パイプと組み合わせて使用
-// const processNumbers = pipe(
-//   greaterThan5,
-//   onlyEven,
-//   double
-// );
-// console.log(processNumbers(numbers)); // [12, 16, 20]
+const processNumbers = pipe(greaterThan5, onlyEven, double);
+console.log(processNumbers(numbers)); // [12, 16, 20]
 
 // ===========================================
 // 問題5: 部分適用の実装と活用
@@ -214,21 +232,16 @@ const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
  */
 
 // TODO: より型安全な部分適用関数を実装
-// type PartialArgs<F> = F extends (...args: infer A) => any ? Partial<A> : never;
-// type RemainingArgs<F, P extends any[]> = /* 型を定義してください */;
-
-// const partial = <F extends (...args: any[]) => any, P extends PartialArgs<F>>(
-//   fn: F,
-//   ...partialArgs: P
-// ) => {
-//   // ここに実装
-// };
+const partial =
+  <A extends any[], B>(fn: (...args: A) => B, ...partialArgs: Partial<A>) =>
+  (...remainingArgs: any[]): B =>
+    fn(...(partialArgs.concat(remainingArgs) as A));
 
 /**
  * 問題5-2: ログ関数の部分適用を活用してください
  */
 
-type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
 
 const log = (level: LogLevel, module: string, message: string): void => {
   const timestamp = new Date().toISOString();
@@ -306,9 +319,9 @@ const log = (level: LogLevel, module: string, message: string): void => {
 type RawProduct = {
   id: string;
   name: string;
-  price: string;        // 文字列として受信
+  price: string; // 文字列として受信
   category: string;
-  stock: string;        // 文字列として受信
+  stock: string; // 文字列として受信
   description: string;
 };
 
@@ -346,19 +359,19 @@ type ProcessedProduct = {
 // };
 
 // TODO: 全体のパイプラインを作成
-// const processProduct = (rawProduct: RawProduct): ProcessedProduct => 
+// const processProduct = (rawProduct: RawProduct): ProcessedProduct =>
 //   pipe(
 //     // ここに変換関数を順番に並べてください
 //   )(rawProduct);
 
 // テストデータ
 const testProduct: RawProduct = {
-  id: 'prod-001',
-  name: 'ワイヤレスマウス',
-  price: '2980',
-  category: 'PC周辺機器',
-  stock: '15',
-  description: '高精度ワイヤレスマウス'
+  id: "prod-001",
+  name: "ワイヤレスマウス",
+  price: "2980",
+  category: "PC周辺機器",
+  stock: "15",
+  description: "高精度ワイヤレスマウス",
 };
 
 // console.log(processProduct(testProduct));
@@ -380,29 +393,29 @@ const testProduct: RawProduct = {
 // テストデータ
 const testProducts: RawProduct[] = [
   {
-    id: 'prod-001',
-    name: 'ワイヤレスマウス',
-    price: '2980',
-    category: 'PC周辺機器',
-    stock: '15',
-    description: '高精度ワイヤレスマウス'
+    id: "prod-001",
+    name: "ワイヤレスマウス",
+    price: "2980",
+    category: "PC周辺機器",
+    stock: "15",
+    description: "高精度ワイヤレスマウス",
   },
   {
-    id: 'prod-002',
-    name: 'キーボード',
-    price: '8900',
-    category: 'PC周辺機器',
-    stock: '0',
-    description: 'メカニカルキーボード'
+    id: "prod-002",
+    name: "キーボード",
+    price: "8900",
+    category: "PC周辺機器",
+    stock: "0",
+    description: "メカニカルキーボード",
   },
   {
-    id: 'prod-003',
-    name: 'ノートPC',
-    price: '89800',
-    category: 'PC本体',
-    stock: '3',
-    description: '軽量ノートPC'
-  }
+    id: "prod-003",
+    name: "ノートPC",
+    price: "89800",
+    category: "PC本体",
+    stock: "3",
+    description: "軽量ノートPC",
+  },
 ];
 
 // 全体の処理パイプライン
@@ -418,6 +431,6 @@ const testProducts: RawProduct[] = [
 // ===========================================
 
 export const runLevel2Tests = () => {
-  console.log('=== レベル2 練習問題のテスト ===');
-  console.log('solutions.ts を確認して、実装を確認してください');
+  console.log("=== レベル2 練習問題のテスト ===");
+  console.log("solutions.ts を確認して、実装を確認してください");
 };
